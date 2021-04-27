@@ -2,6 +2,7 @@ package bitsetbuffer
 
 import (
 	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -147,5 +148,48 @@ func TestBitSetBuffer_Write(t *testing.T) {
 	expecteBytes := []byte{0xf0, 0x0f}
 	if !reflect.DeepEqual(b.Bytes(), expecteBytes) {
 		t.Fatalf("expected \n%v\n but foudn \n%v\n", expecteBytes, b.Bytes())
+	}
+}
+
+func TestByteSwapBits(t *testing.T) {
+	tests := []struct {
+		expected    []bool
+		expectedBig []bool
+	}{
+		{
+			[]bool{
+				true, true, false, false, true, false, true, true,
+				false, false, true,
+			},
+			[]bool{
+				false, false, true,
+				true, true, false, false, true, false, true, true,
+			},
+		},
+
+		{
+			[]bool{
+				true, true, false, false, true, false, true, true,
+				false, false, true, true, true, false, false, false,
+			},
+			[]bool{
+				false, false, true, true, true, false, false, false,
+				true, true, false, false, true, false, true, true,
+			},
+		},
+	}
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			actualBig := byteSwapBitsToBig(test.expected)
+			if !reflect.DeepEqual(test.expectedBig, actualBig) {
+				t.Fatalf("expected \n%v\n but found \n%v\n", test.expectedBig, actualBig)
+			}
+
+			actual := byteSwapBitsFromBig(actualBig)
+
+			if !reflect.DeepEqual(test.expected, actual) {
+				t.Fatalf("expected \n%v\n but found \n%v\n", test.expected, actual)
+			}
+		})
 	}
 }
