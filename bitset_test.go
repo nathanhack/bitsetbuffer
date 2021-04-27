@@ -148,5 +148,4 @@ func TestBitSetBuffer_Write(t *testing.T) {
 	if !reflect.DeepEqual(b.Bytes(), expecteBytes) {
 		t.Fatalf("expected \n%v\n but foudn \n%v\n", expecteBytes, b.Bytes())
 	}
-
 }

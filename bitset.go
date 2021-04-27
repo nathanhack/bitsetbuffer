@@ -1,6 +1,7 @@
 package bitsetbuffer
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 )
@@ -169,4 +170,133 @@ func (bsb *BitSetBuffer) Bytes() []byte {
 		buf = append(buf, bsb.readByte())
 	}
 	return buf
+}
+
+func WriteUint(buf BitSetWriter, numOfBits int, endianness binary.ByteOrder, value uint64) error {
+	intBits := make([]bool, numOfBits)
+	for i := 0; i < numOfBits; i++ {
+		intBits[i] = value&(1<<i) > 0
+	}
+
+	if endianness == binary.BigEndian {
+		intBits = byteSwapBitsToBig(intBits)
+	}
+
+	n, err := buf.WriteBits(intBits)
+	if err != nil {
+		return err
+	}
+	if n != numOfBits {
+		return fmt.Errorf("only %v of %v bits written", n, numOfBits)
+	}
+	return nil
+}
+
+func ReadUint(buf BitSetReader, numOfBits int, endianness binary.ByteOrder) (uint64, error) {
+	intBits := make([]bool, numOfBits)
+	n, err := buf.ReadBits(intBits)
+	if err != nil {
+		return 0, err
+	}
+	if n != numOfBits {
+		return 0, fmt.Errorf("only %v of %v bits read", n, numOfBits)
+	}
+
+	if endianness == binary.BigEndian {
+		intBits = byteSwapBitsFromBig(intBits)
+	}
+
+	value := uint64(0)
+	for i := 0; i < numOfBits; i++ {
+		if intBits[i] {
+			value += 1 << i
+		}
+	}
+	return value, nil
+}
+
+func WriteInts(buf BitSetWriter, numOfBits int, endianness binary.ByteOrder, value int64) error {
+	intBits := make([]bool, numOfBits)
+	for i := 0; i < numOfBits-1; i++ {
+		intBits[i] = value&(1<<i) > 0
+	}
+	intBits[len(intBits)-1] = value < 0
+
+	if endianness == binary.BigEndian {
+		intBits = byteSwapBitsToBig(intBits)
+	}
+
+	n, err := buf.WriteBits(intBits)
+	if err != nil {
+		return err
+	}
+	if n != numOfBits {
+		return fmt.Errorf("only %v of %v bits written", n, numOfBits)
+	}
+	return nil
+
+}
+
+func ReadInts(buf BitSetReader, numOfBits int, endianness binary.ByteOrder) (int64, error) {
+	intBits := make([]bool, numOfBits)
+	n, err := buf.ReadBits(intBits)
+	if err != nil {
+		return 0, err
+	}
+	if n != numOfBits {
+		return 0, fmt.Errorf("only %v of %v bits read", n, numOfBits)
+	}
+
+	if endianness == binary.BigEndian {
+		intBits = byteSwapBitsFromBig(intBits)
+	}
+
+	value := int64(0)
+	if intBits[numOfBits-1] {
+		value -= 1
+	}
+	for i := 0; i < numOfBits-1; i++ {
+		value &= ^(1 << i)
+		if intBits[i] {
+			value |= 1 << i
+		}
+	}
+
+	return value, nil
+}
+
+func byteSwapBitsToBig(bytes []bool) []bool {
+	lenBytes := len(bytes)
+	result := make([]bool, lenBytes)
+
+	for start := 0; start < lenBytes; start = start + 8 {
+		end := start + 8
+		if end >= lenBytes {
+			end = lenBytes
+		}
+
+		offset := lenBytes - end
+		for j := 0; j < end-start; j++ {
+			result[offset+j] = bytes[start+j]
+		}
+	}
+	return result
+}
+
+func byteSwapBitsFromBig(bytes []bool) []bool {
+	result := make([]bool, len(bytes))
+
+	for i := 0; i < len(bytes); i++ {
+		end := len(bytes) - i*8
+		start := end - 8
+		if start < 0 {
+			start = 0
+		}
+
+		offset := i * 8
+		for j := 0; j < end-start; j++ {
+			result[offset+j] = bytes[start+j]
+		}
+	}
+	return result
 }
