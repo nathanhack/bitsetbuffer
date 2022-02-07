@@ -79,6 +79,17 @@ func (bsb *BitSetBuffer) Read(bytes []byte) (n int, err error) {
 	return n, nil
 }
 
+func (bsb *BitSetBuffer) ReadBit() (bit bool, err error) {
+
+	if len(bsb.Set) >= bsb.pos {
+		return false, fmt.Errorf("no bits to read")
+	}
+
+	bit = bsb.Set[bsb.pos]
+	bsb.pos++
+	return bit, nil
+}
+
 func (bsb *BitSetBuffer) ReadBits(bits []bool) (n int, err error) {
 	if bits == nil {
 		return 0, fmt.Errorf("error nil passed in")
@@ -102,18 +113,26 @@ func (bsb *BitSetBuffer) Write(bytes []byte) (n int, err error) {
 	return n, nil
 }
 
+func (bsb *BitSetBuffer) WriteBit(bit bool) {
+	if bsb.Set == nil {
+		bsb.Set = make([]bool, 0)
+	}
+
+	if bsb.pos < len(bsb.Set) {
+		bsb.Set[bsb.pos] = bit
+	} else {
+		bsb.Set = append(bsb.Set, bit)
+	}
+	bsb.pos++
+}
+
 func (bsb *BitSetBuffer) WriteBits(bits []bool) (n int, err error) {
 	if bsb.Set == nil {
 		bsb.Set = make([]bool, 0)
 	}
 
 	for n = 0; n < len(bits); n++ {
-		if bsb.pos < len(bsb.Set) {
-			bsb.Set[bsb.pos] = bits[n]
-		} else {
-			bsb.Set = append(bsb.Set, bits[n])
-		}
-		bsb.pos++
+		bsb.WriteBit(bits[n])
 	}
 	return
 }
