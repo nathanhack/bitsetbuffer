@@ -145,9 +145,9 @@ func TestBitSetBuffer_Write(t *testing.T) {
 	if !reflect.DeepEqual(b.Set, expectedBits) {
 		t.Fatalf("expected \n%v\n but foudn \n%v\n", expectedBits, b.Set)
 	}
-	expecteBytes := []byte{0xf0, 0x0f}
-	if !reflect.DeepEqual(b.Bytes(), expecteBytes) {
-		t.Fatalf("expected \n%v\n but foudn \n%v\n", expecteBytes, b.Bytes())
+	expectedBytes := []byte{0xf0, 0x0f}
+	if !reflect.DeepEqual(b.Bytes(), expectedBytes) {
+		t.Fatalf("expected \n%v\n but foudn \n%v\n", expectedBytes, b.Bytes())
 	}
 }
 
