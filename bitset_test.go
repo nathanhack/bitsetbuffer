@@ -1,6 +1,7 @@
 package bitsetbuffer
 
 import (
+	"encoding/binary"
 	"reflect"
 	"strconv"
 	"testing"
@@ -189,6 +190,68 @@ func TestByteSwapBits(t *testing.T) {
 
 			if !reflect.DeepEqual(test.expected, actual) {
 				t.Fatalf("expected \n%v\n but found \n%v\n", test.expected, actual)
+			}
+		})
+	}
+}
+
+func TestWriteUint(t *testing.T) {
+	type Input struct {
+		numOfBits int
+		values    []uint64
+	}
+	tests := []struct {
+		input    Input
+		expected []byte
+	}{
+		{input: Input{4, []uint64{1, 2, 3, 4}}, expected: []byte{0x21, 0x43}},
+		{input: Input{6, []uint64{1, 2, 3, 4}}, expected: []byte{0x81, 0x30, 0x10}},
+	}
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+
+			buf := &BitSetBuffer{}
+
+			for _, i := range tt.input.values {
+				WriteUint(buf, tt.input.numOfBits, binary.LittleEndian, i)
+			}
+
+			actual := buf.Bytes()
+
+			if !reflect.DeepEqual(tt.expected, actual) {
+				t.Fatalf("expected %v but found %v", tt.expected, actual)
+			}
+		})
+	}
+}
+
+func TestBitSetBuffer_ReadBit(t *testing.T) {
+	type fields struct {
+		pos int
+		Set []bool
+	}
+	tests := []struct {
+		fields  fields
+		wantBit bool
+		wantErr bool
+	}{
+		{fields: fields{pos: 0, Set: []bool{}}, wantBit: false, wantErr: true},
+		{fields: fields{pos: 0, Set: []bool{true}}, wantBit: true, wantErr: false},
+		{fields: fields{pos: 1, Set: []bool{true}}, wantBit: false, wantErr: true},
+	}
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			bsb := &BitSetBuffer{
+				pos: tt.fields.pos,
+				Set: tt.fields.Set,
+			}
+			gotBit, err := bsb.ReadBit()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("BitSetBuffer.ReadBit() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotBit != tt.wantBit {
+				t.Errorf("BitSetBuffer.ReadBit() = %v, want %v", gotBit, tt.wantBit)
 			}
 		})
 	}

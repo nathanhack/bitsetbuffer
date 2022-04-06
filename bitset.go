@@ -80,8 +80,7 @@ func (bsb *BitSetBuffer) Read(bytes []byte) (n int, err error) {
 }
 
 func (bsb *BitSetBuffer) ReadBit() (bit bool, err error) {
-
-	if len(bsb.Set) >= bsb.pos {
+	if len(bsb.Set) <= bsb.pos {
 		return false, fmt.Errorf("no bits to read")
 	}
 
