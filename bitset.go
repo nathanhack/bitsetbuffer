@@ -21,6 +21,10 @@ type BitSetBuffer struct {
 	Set []bool
 }
 
+func New() *BitSetBuffer {
+	return &BitSetBuffer{}
+}
+
 func NewFromBytes(bytes []byte) (*BitSetBuffer, error) {
 	b := BitSetBuffer{}
 	defer func() {
@@ -134,6 +138,23 @@ func (bsb *BitSetBuffer) WriteBits(bits []bool) (n int, err error) {
 		bsb.WriteBit(bits[n])
 	}
 	return
+}
+
+func (bsb *BitSetBuffer) WriteBitSet(bits *BitSetBuffer) (n int, err error) {
+	if bsb.Set == nil {
+		bsb.Set = make([]bool, 0)
+	}
+
+	start := bits.pos
+	for !bits.PosAtEnd() {
+		b, err := bits.ReadBit()
+		if err != nil {
+			return 0, err
+		}
+		bsb.WriteBit(b)
+	}
+
+	return bits.pos - start, nil
 }
 
 func min(a, b int) int {
