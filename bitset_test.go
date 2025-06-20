@@ -2,6 +2,8 @@ package bitsetbuffer
 
 import (
 	"encoding/binary"
+	"math/bits"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"testing"
@@ -252,6 +254,64 @@ func TestBitSetBuffer_ReadBit(t *testing.T) {
 			}
 			if gotBit != tt.wantBit {
 				t.Errorf("BitSetBuffer.ReadBit() = %v, want %v", gotBit, tt.wantBit)
+			}
+		})
+	}
+}
+
+func TestWriteUintReadUint(t *testing.T) {
+
+	values := make([]uint64, 100000)
+	for i := range values {
+		values[i] = rand.Uint64()
+	}
+
+	numOfBits := make([]int, len(values))
+	for i := range values {
+		numOfBits[i] = 64 - bits.LeadingZeros64(values[i])
+	}
+
+	type args struct {
+		values     []uint64
+		numOfBits  []int
+		endianness binary.ByteOrder
+	}
+	tests := []struct {
+		args    args
+		wantErr bool
+	}{
+		{args{values, numOfBits, binary.LittleEndian}, false},
+		{args{values, numOfBits, binary.BigEndian}, false},
+	}
+	for ii, tt := range tests {
+		t.Run(strconv.Itoa(ii), func(t *testing.T) {
+			buf := &BitSetBuffer{}
+
+			if len(tt.args.values) != len(tt.args.numOfBits) {
+				t.Fatalf("len(values) == len(numOfBits)")
+			}
+			var err error
+			for i := range tt.args.values {
+				err = WriteUint(buf, tt.args.numOfBits[i], tt.args.endianness, tt.args.values[i])
+				if err != nil {
+					t.Log(tt.args.values)
+					t.Log(tt.args.numOfBits)
+					t.Fatal(err)
+				}
+			}
+
+			buf.ResetToStart()
+
+			actual := make([]uint64, len(tt.args.numOfBits))
+			for i := range actual {
+				actual[i], err = ReadUint(buf, tt.args.numOfBits[i], tt.args.endianness)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if !reflect.DeepEqual(actual, tt.args.values) {
+				t.Fatalf("expected: %v but found %v", tt.args.values, actual)
 			}
 		})
 	}

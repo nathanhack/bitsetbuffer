@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math/big"
 )
 
 type BitSetReader interface {
@@ -301,6 +302,53 @@ func ReadInt(buf BitSetReader, numOfBits int, endianness binary.ByteOrder) (int6
 		}
 	}
 
+	return value, nil
+}
+
+func WriteBigInt(buf BitSetWriter, numOfBits int, endianness binary.ByteOrder, value *big.Int) error {
+	intBits := make([]bool, numOfBits)
+	for i := 0; i < numOfBits; i++ {
+		intBits[i] = value.Bit(i) > 0
+	}
+
+	if endianness == binary.BigEndian {
+		intBits = byteSwapBitsToBig(intBits)
+	}
+
+	n, err := buf.WriteBits(intBits)
+	if err != nil {
+		return err
+	}
+	if n != numOfBits {
+		return fmt.Errorf("only %v of %v bits written", n, numOfBits)
+	}
+	return nil
+}
+
+func ReadBigInt(buf BitSetReader, numOfBits int, endianness binary.ByteOrder, value *big.Int) (*big.Int, error) {
+	intBits := make([]bool, numOfBits)
+	n, err := buf.ReadBits(intBits)
+	if err != nil {
+		return nil, err
+	}
+	if n != numOfBits {
+		return nil, fmt.Errorf("only %v of %v bits read", n, numOfBits)
+	}
+
+	if value == nil {
+		value = new(big.Int)
+	}
+	value.SetInt64(0) // clear before reading
+
+	if endianness == binary.BigEndian {
+		intBits = byteSwapBitsFromBig(intBits)
+	}
+
+	for i := 0; i < numOfBits; i++ {
+		if intBits[i] {
+			value.SetBit(value, i, 1)
+		}
+	}
 	return value, nil
 }
 
